@@ -1,0 +1,155 @@
+﻿
+@{
+    ViewBag.Title = "User";
+}
+
+<h5 id="userTitle">
+    User Login
+</h5>
+
+@section styles{
+    <style>
+        body {
+            padding-top: 0 !important;
+            padding-bottom: 0 !important;
+        }
+
+        #chat-body p {
+            margin: 5px 0 0 0 !important
+        }
+    </style>
+}
+<div id="loginDiv">
+    <input type="text" class="form-control" placeholder="Name" id="txtUserName" name="userName" />
+    <br />
+    <input type="email" class="form-control" placeholder="Email" id="txtUserEmail" name="userEmail" />
+    <br />
+    <input type="password" class="form-control hidden" placeholder="Password" id="txtUserPassword" name="userPassword" value="abc@123" />
+    <input type="text" class="form-control hidden" placeholder="Note" id="txtUserNote" name="userNote" />
+    <br />
+
+    <button id="btn-add" class="btn btn-sm btn-primary" type="button" onclick="login();">Join</button>
+</div>
+
+<div id="chatDiv" style="display:none;">
+    <div class="panel panel-default">
+        <div class="panel-heading">
+            <div class="pull-right">
+                <i style="margin-right: 16px; color:red" class="glyphicon glyphicon-signal" id="hub-state"></i>
+                <a href="/Home/SignOut" class="btn btn-default btn-xs" style="margin-top:-4px;">Close</a>
+            </div>
+            <h4 class="panel-title" id="chat-title"> Chat with Admin</h4>
+        </div>
+        <div class="panel-body" id="chat-body" style="overflow:auto;height:300px">
+        </div>
+        <div class="panel-footer" style="padding: 10px !important;">
+            <div class="input-group">
+                <input type="text" class="form-control" id="txt-msg" placeholder="Message" onkeydown='if (event.keyCode == 13) { $("#btn-send").click() }'>
+                <span class="input-group-btn">
+                    <button class="btn btn-default" type="button" id="btn-send">Send</button>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section scripts{
+    <script>
+        var name = '';
+        function addMessage(msg, className, time) {
+            $('#chat-body').append('<div class="well well-sm ' + className + '">' + msg +
+                '<p style="font-size: xx-small;">' + new Date(time).toLocaleString() + '</p></div>');
+            var objDiv = document.getElementById("chat-body");
+            objDiv.scrollTop = objDiv.scrollHeight;
+        }
+        function login() {
+            var userName = $("#txtUserName").val();
+            var userEmail = $("#txtUserEmail").val();
+            var userNote = $("#txtUserNote").val();
+            var userPassword = $("#txtUserPassword").val();
+            if (!userName || !userEmail) {
+                alert('Please enter user name and email！'); return false;
+            }
+            console.log(userName);
+            console.log(userEmail);
+           
+            if (userEmail == "admin@chatapp.com") {
+                console.log("HI");
+                window.location.href = "AdminLogin";
+                return;
+            }
+            var data = {
+                userName: userName,
+                userEmail: userEmail,
+                userNote: userNote,
+                userPassword: userPassword
+            }
+            $.ajax({
+                type: "POST",
+                url: "/Home/UserLogin",
+                data: data,
+                dataType: "json",
+                success: function (res) {
+                    name = userName;
+                    $('#chat-title').text(name + " | Chat with Admin")
+                    $('#loginDiv').hide();
+                    $('#userTitle').hide();
+                    $('#chatDiv').show();
+                    $.connection.hub.start();
+                }
+            });
+        }
+
+    </script>
+    <script>
+        var inteval = 0.25 * 60 * 1000;
+        t = setTimeout(function () {
+            window.location = "/Home/Signout";
+        }, inteval);
+        $(document).on('click keyup keypress', function () {//mousemove
+            clearTimeout(t);
+            t = setTimeout(function () {
+                window.location = "/Home/Signout";
+            }, inteval); // also refresh the value of the timeout
+        });
+    </script>
+    <script type="text/javascript">
+        $(function () {
+            //if (typeof $('iframe', parent.document).length == 'number') {
+            //    window.location.href = "/Home/NewUser";
+            //}
+            // chat hub
+            var ticker = $.connection.groupChatHub;
+            //HUB WILL START AFTER LOGIN
+            //$.connection.hub.start();
+            $.connection.hub.stateChanged(function (state) {
+                var stateConversion = { 0: 'connecting', 1: 'connected', 2: 'reconnecting', 4: 'disconnected' };
+                var stateColor = { 0: 'lightblue', 1: 'lightgreen', 2: 'orange', 4: 'red' };
+                $('#hub-state').css('color', stateColor[state.newState]).attr('title', stateConversion[state.newState]);
+            });
+            // Receive messages sent by the server
+            $.extend(ticker.client, {
+
+                // Receive chat messages
+                publishMsg: function (data) {
+                    addMessage(data.Msg, 'text-left', new Date());
+                },
+
+                // Receive list of users online
+                publishUser: function (data) {
+                    //for future use
+                }
+            });
+            // send message
+            $("#btn-send").click(function () {
+                var msg = $("#txt-msg").val();
+                if (!msg) {
+                    alert('Please enter message！'); return false;
+                }
+                $("#txt-msg").val('');
+                addMessage(msg, 'text-right', new Date());
+                ticker.server.sendMsg("Admin", msg);//will send message to admin only
+            });
+        });
+    </script>
+}

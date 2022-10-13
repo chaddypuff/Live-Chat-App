@@ -1,0 +1,89 @@
+﻿@{
+    ViewBag.Title = "Chat";
+}
+
+<!--individual user chat-->
+
+@section Scripts{
+
+    <script type="text/javascript">
+        $(function () {
+
+            // chat hub
+            var ticker = $.connection.groupChatHub;
+            $.connection.hub.start();
+            $.connection.hub.stateChanged(function (state) {
+                var stateConversion = { 0: 'connecting', 1: 'connected', 2: 'reconnecting', 4: 'disconnected' };
+                var stateColor = { 0: 'lightblue', 1: 'lightgreen', 2: 'orange', 4: 'red' };
+                $('#hub-state').css('color', stateColor[state.newState]).attr('title', stateConversion[state.newState]);
+            });
+            // Receive messages sent by the server
+            $.extend(ticker.client, {
+
+                // Receive chat messages
+                publishMsg: function (data) {
+                    addMessage(data.Msg, 'text-left');
+                },
+
+                // Receive list of users online
+                publishUser: function (data) {
+                    //for future use
+                }
+            });
+            function addMessage(msg, className) {
+                $('#chat-body').append('<div class="well well-sm ' + className + '">' + msg + '</div >');
+                $("#chat-body").parents("div")[0].scrollTop = $("#chat-body").parents("div")[0].scrollHeight;
+            }
+            // send message
+            $("#btn-send").click(function () {
+                var msg = $("#txt-msg").val();
+                if (!msg) {
+                    alert('Please enter message！'); return false;
+                }
+                $("#txt-msg").val('');
+                addMessage(msg, 'text-right');
+                ticker.server.sendMsg("Admin", msg);//will send message to admin only
+            });
+
+        });
+    </script>
+    <script>
+        var inteval = 2 * 60 * 1000;
+        t = setTimeout(function () {
+            window.location = "/Home/Signout";
+        }, inteval);
+        $(document).on('click keyup keypress', function () {//mousemove
+            clearTimeout(t);
+            t = setTimeout(function () {
+                window.location = "/Home/Signout";
+            }, inteval); // also refresh the value of the timeout
+        });
+    </script>
+}
+
+
+<h2>&nbsp;</h2>
+@{
+    var name = (Session["userName"] != null ? Session["userName"].ToString() : "") + " | ";
+}
+<div class="panel panel-default">
+    <div class="panel-heading">
+        <div class="pull-right">
+            <i style="margin-right: 16px; color:red" class="glyphicon glyphicon-signal" id="hub-state"></i>
+            <a href="/Home/SignOut" class="btn btn-default btn-xs" style="margin-top:-4px;">Close</a>
+        </div>
+        <h4 class="panel-title" id="chat-title">@name Chat with Admin</h4>
+    </div>
+    <div class="panel-body" id="chat-body" style="overflow:auto;height:300px">
+    </div>
+    <div class="panel-footer" style="padding: 10px !important;">
+        <div class="input-group">
+            <input type="text" class="form-control" id="txt-msg" placeholder="Message" onkeydown='if (event.keyCode == 13) { $("#btn-send").click() }'>
+            <span class="input-group-btn">
+                <button class="btn btn-default" type="button" id="btn-send">Send</button>
+            </span>
+        </div>
+    </div>
+</div>
+
+

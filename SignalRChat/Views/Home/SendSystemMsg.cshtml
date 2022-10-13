@@ -1,0 +1,37 @@
+﻿
+@{
+    ViewBag.Title = "System Messages";
+}
+
+
+@section Scripts{
+
+
+<script type="text/javascript">
+    $(function () {
+        $("#btn-send-system").click(function () {
+            var msg = $("#txt-msg-system").val();
+            if (!msg) {
+                alert('Please enter Message！'); return false;
+            }
+            //will post data to same controller's action
+            $.post("", { msg: msg }, function (data) {
+                if (data == "s") {
+                    $("#txt-msg-system").val('');
+                    alert('Message Sent！');
+                }
+            });
+        });
+
+    });
+</script>
+
+}
+
+
+<h2>Administrator sends system message</h2>
+
+<input type="text" onkeydown='if (event.keyCode == 13) { $("#btn-send-system").click() }' class="form-control" id="txt-msg-system" placeholder="Message" />
+<br />
+<button type="button" class="btn btn-sm btn-default" id="btn-send-system">Send</button>
+

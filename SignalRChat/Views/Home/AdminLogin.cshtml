@@ -1,0 +1,36 @@
+﻿
+@{
+    ViewBag.Title = "AdminLogin";
+}
+
+
+
+@section Scripts{
+
+    <script type="text/javascript">
+        $(function () {
+            $("#btn-add").click(function () {
+                var userName = $("#txtUserName").val();
+                var userEmail = $("#txtUserEmail").val();
+                var userNote = $("#txtUserNote").val();
+                var userPassword = $("#txtUserPassword").val();
+                if (!userPassword || !userEmail) {
+                    alert('Please enter user emailand password！'); return false;
+                }
+            });
+        });
+    </script>
+
+}
+
+<h2>
+    Admin Login
+</h2>
+<form method="post" action="/Home/AdminLogin" autocomplete="off">
+    <input type="email" class="form-control" placeholder="Email" id="txtUserEmail" name="userEmail" />
+    <br />
+    <input type="password" class="form-control" placeholder="Password" id="txtUserPassword" name="userPassword" />
+    <br />
+    <button id="btn-add" class="btn btn-sm btn-primary" type="submit">Login</button>
+</form>
+

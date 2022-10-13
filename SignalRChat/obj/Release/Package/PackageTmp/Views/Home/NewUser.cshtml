@@ -1,0 +1,41 @@
+﻿
+@{
+    ViewBag.Title = "New User";
+}
+
+@section Scripts{
+
+    <script type="text/javascript">
+        $(function () {
+            $("#btn-add").click(function () {
+                var userName = $("#txtUserName").val();
+                var userEmail = $("#txtUserEmail").val();
+                var userNote = $("#txtUserNote").val();
+                var userPassword = $("#txtUserPassword").val();
+                if (!userName || !userEmail) {
+                    alert('Please enter user name and email！'); return false;
+                }                
+            });
+        });
+      
+        if (typeof $('iframe', parent.document).length == 'number') {
+            $('form').removeAttr('target');
+        }
+    </script>
+    
+}
+
+<h2>
+    New User
+</h2>
+<form method="post" action="/Home/NewUser" autocomplete="off">
+    <input type="text" class="form-control" placeholder="Name" id="txtUserName" name="userName" />
+    <br />
+    <input type="email" class="form-control" placeholder="Email" id="txtUserEmail" name="userEmail" />
+    <br />
+    <input type="password" class="form-control hidden" placeholder="Password" id="txtUserPassword" name="userPassword" value="abc@123" />
+    <input type="text" class="form-control" placeholder="Note" id="txtUserNote" name="userNote" />
+    <br />
+    
+    <button id="btn-add" class="btn btn-sm btn-primary" type="submit">Join</button>
+</form>

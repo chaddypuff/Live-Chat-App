@@ -1,0 +1,166 @@
+﻿
+@{
+    ViewBag.Title = "Admin";
+}
+<!--Admin chat page-->
+@section Styles{ 
+    <style>
+        .text-right{
+            background-color:darkgray;
+        }
+    </style>
+}
+<h1></h1>
+<div class="row">
+    <div class="col-lg-3 col-md-3 col-sm-4">
+        <ul class="list-group">
+            <li class="list-group-item">
+                <span class="badge" id="count"></span>
+                Online Users
+            </li>
+        </ul>
+        <!--will have individual user name toc hat with-->
+        <input type="hidden" name="selectedUser" id="hfSelectedUser" value="Everyone" />
+        <!--will have all online users-->
+        <div class="list-group" id="users"></div>
+    </div>
+    <div class="col-lg-9 col-md-9 col-sm-8" >
+        <div class="panel panel-primary">
+            <div class="panel-heading">
+                <div class="pull-right">
+                    <i style="margin-right: 16px; color:red" class="glyphicon glyphicon-signal" id="hub-state"></i>
+                    <a href="/Home/SignOut" class="btn btn-default btn-xs" style="margin-top:-4px;">Close</a>
+                </div>
+                <h4 class="panel-title" id="chat-title">Everyone</h4>
+            </div>
+            <div class="panel-body" id="chat-body" style="overflow:auto;height:300px"></div>
+            <div class="panel-footer" style="padding: 10px !important;">
+                <div class="input-group">
+                    <input type="text" class="form-control" id="txt-msg-admin" placeholder="Message" onkeydown='if (event.keyCode == 13) { $("#btn-send-admin").click() }'>
+                    <span class="input-group-btn">
+                        <button class="btn btn-default" type="button" id="btn-send-admin">Send</button>
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+@section Scripts{
+
+    <script type="text/javascript">
+        $(function () {
+
+            // chat hub
+            var ticker = $.connection.groupChatHub;
+            //if ($.connection.hub && $.connection.hub.state === $.signalR.connectionState.disconnected) {
+                //$.connection.hub.start().done(function () {
+                //    console.log('SignalR Connected');
+                //}).onclose(function () {
+                //    console.log('SignalR Disconnected');
+                //});
+            //}
+            $.connection.hub.start().done(function () {
+                popultaeUserList();
+            });
+            $.connection.hub.stateChanged(function (state) { //state.oldState, state.newState
+                var stateConversion = { 0: 'connecting', 1: 'connected', 2: 'reconnecting', 4: 'disconnected' };
+                var stateColor = { 0: 'lightblue', 1: 'lightgreen', 2: 'orange', 4: 'red' };
+                $('#hub-state').css('color', stateColor[state.newState]).attr('title', stateConversion[state.newState]);
+            });
+            // Receive messages sent by the server
+            $.extend(ticker.client, {
+
+                // Receive chat messages
+                publishMsg: function (data) {
+                    var activeusername = data.Name.replace(/ /g, '');
+                    $('#chat-body').append('<div class="well well-sm hidden text-left ' + activeusername+'">'+ data.Msg + '</div>');
+                    $("#chat-body").parents("div")[0].scrollTop = $("#chat-body").parents("div")[0].scrollHeight;
+                    activateChatDisplayForUser(activeusername);
+                },
+                publishSystemMsg: function (data) {
+                    $('#chat-body').append('<div class="well well-sm hidden text-left Everyone">' + data.Msg + '</div>');
+                    $("#chat-body").parents("div")[0].scrollTop = $("#chat-body").parents("div")[0].scrollHeight;
+                    activateChatDisplayForUser('Everyone');
+                },
+                // Receive people online, then join Select for individual chat selection
+                publishUsers: function (data) {
+                    popultaeUserList(data);
+                },
+                publishChatHistory: function (data, name, reload = false) {
+                    $.each(data, function (i, chat) {
+                        var activeusername = chat.FromUserName.replace(/ /g, '');
+                        if (name == activeusername) {
+                            $('#chat-body').append('<div class="well well-sm hidden text-left ' + name + '">' + chat.Message + '</div>');
+                        } else {
+                            $('#chat-body').append('<div class="well well-sm hidden text-right ' + name + '">' + chat.Message + '</div>');
+                        }
+                    });
+                    
+                    $("#chat-body").parents("div")[0].scrollTop = $("#chat-body").parents("div")[0].scrollHeight;
+                    if (reload) {
+                        activateChatDisplayForUser(name);
+                    }                    
+                }
+            });
+            function popultaeUserList(data) {
+                $("#count").text(data.length);
+                $("#users").empty();
+                $("#users").append('<a href="#" data-name="Everyone" data-id="0" onclick="loadChat(0, \'Everyone\')" class="list-group-item active"><span id="user0" class="badge hidden">0</span> Everyone</a>');
+                for (var i = 0; i < data.length; i++) {
+                    var id = i + 1;
+                    $("#users").append('<a href="#" data-name="' + data[i].Key + '" data-id="' + id + '" onclick="loadChat(' + id + ',\'' + data[i].Key + '\')" class="list-group-item"><span id="user' + id + '" class="badge hidden">0</span>' + data[i].Key + '</a>')
+                }
+                $('.list-group-item').off('click').on('click', function () {
+                    $('.list-group-item').removeClass('active');
+                    $(this).addClass('active');
+                });
+            }
+            // send message
+            $("#btn-send-admin").click(function () {
+                var msg = $("#txt-msg-admin").val();
+                if (!msg) {
+                    alert('Please enter message！'); return false;
+                }
+                $("#txt-msg-admin").val('');
+                $('#chat-body').append('<div class="well well-sm hidden text-right ' + $('#hfSelectedUser').val().replace(/ /g, '')+'">' + msg + '</div>');
+                // Proactively send messages, passing in who to send to, and what to send.
+                ticker.server.sendMsg($('#hfSelectedUser').val(), msg);
+                activateChatDisplayForUser($('#hfSelectedUser').val());
+            });
+            setTimeout(function () {
+                ticker.server.populateUserList();
+                ticker.server.reloadChatHistory();
+                $('.list-group-item').on('click', function () {
+                    $('.list-group-item').removeClass('active');
+                    $(this).addClass('active');
+                });
+            }, 1000);
+            
+        });
+        function loadChat(id, name) {
+            $('#hfSelectedUser').val(name);
+            $('#chat-title').text(name);
+            activateChatDisplayForUser(name.replace(/ /g, ''));
+        }
+        function activateChatDisplayForUser(user) {
+            var activate = user == $('#hfSelectedUser').val().replace(/ /g, '');
+            var id = $("#users").find("[data-name='" + user + "']").data('id');
+            if (activate) {
+                $('#chat-body').find('.well').addClass('hidden');
+                $('#chat-body').find('.' + user).removeClass('hidden');               
+                $('#user' + id).text('0').addClass('hidden');
+            } else {
+                var counterElement = $('#user' + id);
+                var count = Number(counterElement.text());
+                count++;
+                counterElement.text(count).removeClass('hidden');
+            }
+        }
+        function connectionStateChanged(state) {
+            var stateConversion = { 0: 'connecting', 1: 'connected', 2: 'reconnecting', 4: 'disconnected' };
+            console.log('SignalR state changed from: ' + stateConversion[state.oldState]
+                + ' to: ' + stateConversion[state.newState]);
+        }
+    </script>
+
+}
